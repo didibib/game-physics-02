@@ -159,7 +159,7 @@ class CustomMenu : public igl::opengl::glfw::imgui::ImGuiMenu
   virtual void draw_viewer_menu() override
   {
     // Draw parent menu
-    ImGuiMenu::draw_viewer_menu();
+    //ImGuiMenu::draw_viewer_menu();
     
     // Add new group
     if (ImGui::CollapsingHeader("Algorithm Options", ImGuiTreeNodeFlags_DefaultOpen))
