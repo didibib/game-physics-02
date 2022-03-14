@@ -3,6 +3,7 @@
 #include <igl/opengl/glfw/imgui/ImGuiMenu.h>
 #include <igl/opengl/glfw/imgui/ImGuiHelpers.h>
 #include <iostream>
+#include <filesystem>
 #include "scene.h"
 #include "line_cylinders.h"
 
@@ -174,26 +175,51 @@ class CustomMenu : public igl::opengl::glfw::imgui::ImGuiMenu
   }
 };
 
-
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
 
 int main(int argc, char *argv[])
 {
   using namespace Eigen;
   using namespace std;
-  
-  
-  // Load scene
-  if (argc<4){
-    cout<<"Please provide path (argument 1), name of scene file (argument 2), and name of constraints file (argument 3)!"<<endl;
-    return 0;
+
+  const std::string DATA_DIR_STR = TOSTRING(DATA_DIR_M);
+  std::vector<std::string> scene_files;
+
+  for (const auto& file : std::filesystem::directory_iterator(DATA_DIR_STR))
+  {
+      if (!file.is_regular_file()) continue;
+      if (!(file.path().extension().string() == ".txt")) continue;
+      scene_files.push_back(file.path().filename().string());
   }
-  cout<<"scene file: "<<std::string(argv[2])<<endl;
+
+  cout << "\nScene files found in data folder:" << endl;
+  for (int i = 0; i < scene_files.size(); i++)
+  {
+      cout << i << ") " << scene_files[i] << endl;
+  }
+  cout << endl;
+
+  int sceneIndex = -1;
+  while (sceneIndex < 0 || sceneIndex >= scene_files.size())
+  {
+      cout << "Please choose a scene index(0 - " << (scene_files.size() - 1) << ")" << endl;
+      cin >> sceneIndex;
+  }
+
+  int constraintIndex = -1;
+  while (constraintIndex < 0 || constraintIndex >= scene_files.size())
+  {
+      cout << "Please choose a constraint index(0 - " << (scene_files.size() - 1) << ")" << endl;
+      cin >> constraintIndex;
+  }
+
   //create platform
   createPlatform();
   scene.addMesh(platV, platF, platT, 10000.0, true, platCOM, platOrientation);
   
   //load scene from file
-  scene.loadScene(std::string(argv[1]),std::string(argv[2]),std::string(argv[3]));
+  scene.loadScene(DATA_DIR_STR, scene_files[sceneIndex], scene_files[constraintIndex]);
 
   scene.updateScene(0.0, CRCoeff, tolerance, maxIterations);
   
