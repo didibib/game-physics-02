@@ -136,11 +136,13 @@ public:
 		}
 
 		// 1x6
-		RowVectorXd J;
-		J << refVector;
-		J << -refVector;
-
-		double lambda = Cp / (J * invMassMatrix * J.transpose());
+		MatrixXd J(2,3);
+		J.row(0) = refVector;
+		J.row(1) = -refVector;
+		J.resize(1, 6);
+		
+		double frac = (J * invMassMatrix * J.transpose())(0,0);
+		double lambda = Cp / frac;
 
 		// 1x6
 		correctedCOMPositions = invMassMatrix * J.transpose() * lambda;

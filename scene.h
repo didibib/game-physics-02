@@ -333,22 +333,24 @@ public:
 		 update m(1,2) comVelocity, angVelocity and COM variables by using a Constraint class of type COLLISION
 		 ***********************/
 
-		// Calculate contact position
+		 // Calculate contact position
 		RowVector3d contactPosition = penPosition + contactNormal * depth;
 		// 2x3 matrix
 		MatrixXd constraintPositions(2, 3);
-		constraintPositions << penPosition;
-		constraintPositions << contactPosition;
+		constraintPositions.row(0) = penPosition;
+		constraintPositions.row(1) = contactPosition;
 
+		//constraintPositions << penPosition.x(), penPosition.y(), penPosition.z();
+		//constraintPositions << contactPosition.x(), contactPosition.y(), contactPosition.z();
+		//constraintPositions.resize(2, 3);
 
 		Constraint c(ConstraintType::COLLISION, ConstraintEqualityType::INEQUALITY, -1, -1, -1, -1, invMass1, invMass2, contactNormal, depth, CRCoeff);
 		// Use resolveVelocityConstraint to correct velocities
 
-
 		// Use resolvePositionConstraint to correct positions
-		MatrixXd COMs(2,3);
-		COMs << m1.COM;
-		COMs << m2.COM;
+		MatrixXd COMs(2, 3);
+		COMs.row(0) = m1.COM;
+		COMs.row(1) = m2.COM;
 
 		MatrixXd corrCOMs;
 		c.resolvePositionConstraint(COMs, constraintPositions, corrCOMs, 0);
