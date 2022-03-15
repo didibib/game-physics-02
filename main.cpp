@@ -203,15 +203,8 @@ int main(int argc, char *argv[])
   int sceneIndex = -1;
   while (sceneIndex < 0 || sceneIndex >= scene_files.size())
   {
-      cout << "Please choose a scene index(0 - " << (scene_files.size() - 1) << ")" << endl;
+      cout << "Please choose a SCENE index(0 - " << (scene_files.size() - 1) << ")" << endl;
       cin >> sceneIndex;
-  }
-
-  int constraintIndex = -1;
-  while (constraintIndex < 0 || constraintIndex >= scene_files.size())
-  {
-      cout << "Please choose a constraint index(0 - " << (scene_files.size() - 1) << ")" << endl;
-      cin >> constraintIndex;
   }
 
   //create platform
@@ -219,7 +212,7 @@ int main(int argc, char *argv[])
   scene.addMesh(platV, platF, platT, 10000.0, true, platCOM, platOrientation);
   
   //load scene from file
-  scene.loadScene(DATA_DIR_STR, scene_files[sceneIndex], scene_files[constraintIndex]);
+  scene.loadScene(DATA_DIR_STR, scene_files[sceneIndex], scene_files[sceneIndex - 1]);
 
   scene.updateScene(0.0, CRCoeff, tolerance, maxIterations);
   

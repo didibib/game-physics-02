@@ -340,23 +340,33 @@ public:
 		constraintPositions.row(0) = penPosition;
 		constraintPositions.row(1) = contactPosition;
 
-		//constraintPositions << penPosition.x(), penPosition.y(), penPosition.z();
-		//constraintPositions << contactPosition.x(), contactPosition.y(), contactPosition.z();
-		//constraintPositions.resize(2, 3);
-
 		Constraint c(ConstraintType::COLLISION, ConstraintEqualityType::INEQUALITY, -1, -1, -1, -1, invMass1, invMass2, contactNormal, depth, CRCoeff);
-		// Use resolveVelocityConstraint to correct velocities
 
-		// Use resolvePositionConstraint to correct positions
 		MatrixXd COMs(2, 3);
 		COMs.row(0) = m1.COM;
 		COMs.row(1) = m2.COM;
+		MatrixXd COMVs(2, 3);
+		COMVs.row(0) = m1.comVelocity;
+		COMVs.row(1) = m2.comVelocity;
+		MatrixXd ANGVs(2, 3);
+		ANGVs.row(0) = m1.angVelocity;
+		ANGVs.row(1) = m2.angVelocity;
 
+		// Use resolveVelocityConstraint to correct velocities
+		MatrixXd corrCOMVs;
+		MatrixXd corrANGVs;
+		c.resolveVelocityConstraint(COMs, constraintPositions, COMVs, ANGVs, m1.getCurrInvInertiaTensor(), m2.getCurrInvInertiaTensor(), corrCOMVs, corrANGVs, tolerance);
+		m1.comVelocity = corrCOMVs.row(0);
+		m2.comVelocity = corrCOMVs.row(1);
+		m1.angVelocity = corrANGVs.row(0);
+		m2.angVelocity = corrANGVs.row(1);
+
+		// Use resolvePositionConstraint to correct positions
 		MatrixXd corrCOMs;
-		c.resolvePositionConstraint(COMs, constraintPositions, corrCOMs, 0);
+		c.resolvePositionConstraint(COMs, constraintPositions, corrCOMs, tolerance);
 
-		m1.COM += corrCOMs.row(0);
-		m2.COM += corrCOMs.row(1);
+		m1.COM = corrCOMs.row(0);
+		m2.COM = corrCOMs.row(1);
 	}
 
 	/*********************************************************************

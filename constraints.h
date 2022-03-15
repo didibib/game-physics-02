@@ -60,7 +60,29 @@ public:
 										 double    tolerance)
 	{
 		MatrixXd invMassMatrix = MatrixXd::Zero(12, 12);
-		RowVectorXd constGradient(12);
+		invMassMatrix(0, 0) = invMass1;
+		invMassMatrix(1, 1) = invMass1;
+		invMassMatrix(2, 2) = invMass1;
+
+		invMassMatrix(6, 6) = invMass2;
+		invMassMatrix(7, 7) = invMass2;
+		invMassMatrix(8, 8) = invMass2;
+
+		invMassMatrix.block(3, 3, 3, 3) = invInertiaTensor1;
+		invMassMatrix.block(9, 9, 3, 3) = invInertiaTensor2;
+
+		MatrixXd constGradient(4,3);
+
+		RowVector3d r1 = currVertexPositions.row(0) - currCOMPositions.row(0);
+		RowVector3d r2 = currVertexPositions.row(1) - currCOMPositions.row(1);
+
+		// normal
+		constGradient.row(0) = refVector;
+		constGradient.row(1) = refVector.cross(r1);
+		constGradient.row(2) = -refVector;
+		constGradient.row(3) = -refVector.cross(r2);
+
+		constGradient.resize(1, 12);
 
 		/**************
 		 TODO: write velocity correction procedure:
@@ -70,26 +92,49 @@ public:
 
 		 Note to differentiate between different constraint types; for inequality constraints you don't do anything unless it's unsatisfied.
 		 ***************/
-		// 1x12 vector containing v1, omega 1, v2, omega 2 
-		RowVectorXd v;
-		// v1
-		v << currCOMVelocities.row(0);
-		// omega 1
-		v << currAngularVelocities.row(0);
-		// v2
-		v << currCOMVelocities.row(1);
-		// omega 2
-		v << currAngularVelocities.row(1);	
 
-		//Stub code: remove upon implementation
-		correctedCOMVelocities = currCOMVelocities;
-		correctedAngularVelocities = currAngularVelocities;
-		return true;
-		//end of stub code
+		// 1x12 vector containing v1, omega 1, v2, omega 2 
+		MatrixXd v (4,3);
+		// v1
+		v.row(0) = currCOMVelocities.row(0);
+		// omega 1
+		v.row(1) = currAngularVelocities.row(0);
+		// v2
+		v.row(2) = currCOMVelocities.row(1);
+		// omega 2
+		v.row(3) = currAngularVelocities.row(1);	
+		v.resize(12, 1);
+		double Jv = (constGradient * v)(0,0);
+
+		if ((constraintEqualityType == ConstraintEqualityType::EQUALITY && std::abs(Jv) <= tolerance)
+			|| (constraintEqualityType == ConstraintEqualityType::INEQUALITY && Jv >= 0))
+		{
+			correctedCOMVelocities = currCOMVelocities;
+			correctedAngularVelocities = currAngularVelocities;
+			return true;
+		}
+
+		double frac = (constGradient * invMassMatrix * constGradient.transpose())(0,0);
+		double lambda = -(1 + CRCoeff) * Jv / frac;
+
+		// [com1 ang1 com2 ang2]
+		RowVector3d corrections = (invMassMatrix * constGradient.transpose()) * lambda;
+		corrections.resize(4, 3);
+
+		MatrixXd deltaCOM(2, 3);
+		MatrixXd deltaANG(2, 3);
+		deltaCOM << corrections.row(0);
+		deltaCOM << corrections.row(2);
+		deltaANG << corrections.row(1);
+		deltaANG << corrections.row(3);
+
+		correctedCOMVelocities = currCOMVelocities + deltaCOM;
+		correctedAngularVelocities = currAngularVelocities + deltaANG;
+		return false;
 	}
 
-	//projects the position unto the constraint
-	//returns true if constraint was already valid with "currPositions"
+	// Projects the position unto the constraint
+	// Returns true if constraint was already valid with "currPositions"
 	bool resolvePositionConstraint(const MatrixXd& currCOMPositions, 
 								   const MatrixXd& currConstPositions, 
 								         MatrixXd& correctedCOMPositions, 
@@ -123,6 +168,7 @@ public:
 			break;
 			case ConstraintType::DISTANCE:
 			{
+				// The current distance (dist), and the desired distance (refValue), must be equal to zero.
 				Cp = dist - refValue;
 			}
 			break;
@@ -148,8 +194,9 @@ public:
 		correctedCOMPositions = invMassMatrix * J.transpose() * lambda;
 		// Resize to 2x3 
 		correctedCOMPositions.resize(2, 3);
+		correctedCOMPositions += currCOMPositions;
 
-		return true;
+		return false;
 	}
 };
 
