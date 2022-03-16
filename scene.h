@@ -145,9 +145,9 @@ public:
 		if (isFixed)
 			return;  //a fixed object is immobile
 
-		  /********
-		   DONE: complete from Practical 1
-		   *******/
+		/********
+		 DONE: complete from Practical 1
+		 *******/
 		COM += comVelocity * timeStep;
 
 		// (0, \omega)
@@ -218,7 +218,6 @@ public:
 	//You need to modify this to integrate from acceleration in the field (basically gravity)
 	void updateVelocity(double timeStep)
 	{
-
 		if (isFixed)
 			return;
 
@@ -333,14 +332,14 @@ public:
 		 update m(1,2) comVelocity, angVelocity and COM variables by using a Constraint class of type COLLISION
 		 ***********************/
 
-		 // Calculate contact position
+		Constraint c(ConstraintType::COLLISION, ConstraintEqualityType::INEQUALITY, -1, -1, -1, -1, invMass1, invMass2, contactNormal, depth, CRCoeff);
+
+		// Calculate contact position
 		RowVector3d contactPosition = penPosition + contactNormal * depth;
 		// 2x3 matrix
 		MatrixXd constraintPositions(2, 3);
 		constraintPositions.row(0) = penPosition;
 		constraintPositions.row(1) = contactPosition;
-
-		Constraint c(ConstraintType::COLLISION, ConstraintEqualityType::INEQUALITY, -1, -1, -1, -1, invMass1, invMass2, contactNormal, depth, CRCoeff);
 
 		MatrixXd COMs(2, 3);
 		COMs.row(0) = m1.COM;
@@ -352,6 +351,13 @@ public:
 		ANGVs.row(0) = m1.angVelocity;
 		ANGVs.row(1) = m2.angVelocity;
 
+		// Use resolvePositionConstraint to correct positions
+		MatrixXd corrCOMs;
+		c.resolvePositionConstraint(COMs, constraintPositions, corrCOMs, tolerance);
+
+		m1.COM = corrCOMs.row(0);
+		m2.COM = corrCOMs.row(1);
+
 		// Use resolveVelocityConstraint to correct velocities
 		MatrixXd corrCOMVs;
 		MatrixXd corrANGVs;
@@ -360,13 +366,6 @@ public:
 		m2.comVelocity = corrCOMVs.row(1);
 		m1.angVelocity = corrANGVs.row(0);
 		m2.angVelocity = corrANGVs.row(1);
-
-		// Use resolvePositionConstraint to correct positions
-		MatrixXd corrCOMs;
-		c.resolvePositionConstraint(COMs, constraintPositions, corrCOMs, tolerance);
-
-		m1.COM = corrCOMs.row(0);
-		m2.COM = corrCOMs.row(1);
 	}
 
 	/*********************************************************************
