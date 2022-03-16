@@ -332,7 +332,7 @@ public:
 		 update m(1,2) comVelocity, angVelocity and COM variables by using a Constraint class of type COLLISION
 		 ***********************/
 
-		Constraint c(ConstraintType::COLLISION, ConstraintEqualityType::INEQUALITY, -1, -1, -1, -1, invMass1, invMass2, contactNormal, depth, CRCoeff);
+		Constraint c(ConstraintType::COLLISION, ConstraintEqualityType::INEQUALITY, -1, -1, -1, -1, invMass1, invMass2, contactNormal, depth, 0, CRCoeff);
 
 		// Calculate contact position
 		RowVector3d contactPosition = penPosition + contactNormal * depth;
@@ -546,13 +546,12 @@ public:
 			//cout<<"initDist: "<<initDist<<endl;
 			double invMass1 = (meshes[attachM1].isFixed ? 0.0 : 1.0 / meshes[attachM1].totalMass);  //fixed meshes have infinite mass
 			double invMass2 = (meshes[attachM2].isFixed ? 0.0 : 1.0 / meshes[attachM2].totalMass);
-			constraints.push_back(Constraint(ConstraintType::DISTANCE, ConstraintEqualityType::EQUALITY, attachM1, attachV1, attachM2, attachV2, invMass1, invMass2, RowVector3d::Zero(), initDist, 0.0));
+			constraints.push_back(Constraint(ConstraintType::DISTANCE, ConstraintEqualityType::EQUALITY, attachM1, attachV1, attachM2, attachV2, invMass1, invMass2, RowVector3d::Zero(), initDist, .9, 0.0));
 
 		}
 
 		return true;
 	}
-
 
 	Scene() {}
 	~Scene() {}

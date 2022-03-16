@@ -1,11 +1,13 @@
 #ifndef CONSTRAINTS_HEADER_FILE
 #define CONSTRAINTS_HEADER_FILE
 
+#include <algorithm>
+
 using namespace Eigen;
 using namespace std;
 
-typedef enum class ConstraintType { DISTANCE, COLLISION } ConstraintType;   //You can expand it for more constraints
-typedef enum class ConstraintEqualityType { EQUALITY, INEQUALITY } ConstraintEqualityType;
+typedef enum class ConstraintType { DISTANCE, COLLISION, STRETCH} ConstraintType;   //You can expand it for more constraints
+typedef enum class ConstraintEqualityType { EQUALITY, INEQUALITY, DOUBLE_SIDED_INEQUALITY } ConstraintEqualityType;
 
 //there is such constraints per two variables that are equal. That is, for every attached vertex there are three such constraints for (x,y,z);
 class Constraint
@@ -16,6 +18,7 @@ public:
 	int v1, v2;                     //Two vertices from the respective meshes - auxiliary data for users (constraint class shouldn't use that)
 	double invMass1, invMass2;       //inverse masses of two bodies
 	double refValue;                //Reference values to use in the constraint, when needed (like distance)
+	double refValue2;               //Reference values to use in the constraint, when needed (like flexibility)
 	RowVector3d refVector;          //Reference vector when needed (like vector)
 	double CRCoeff;                 //extra velocity bias
 	ConstraintType constraintType;  //The type of the constraint, and will affect the value and the gradient. This SHOULD NOT change after initialization!
@@ -31,6 +34,7 @@ public:
 		const double& _invMass2,
 		const RowVector3d& _refVector,
 		const double& _refValue,
+		const double& _refValue2,
 		const double& _CRCoeff)
 		: constraintType(_constraintType),
 		constraintEqualityType(_constraintEqualityType),
@@ -38,6 +42,7 @@ public:
 		invMass1(_invMass1),
 		invMass2(_invMass2),
 		refValue(_refValue),
+		refValue2(_refValue2),
 		CRCoeff(_CRCoeff)
 	{
 		refVector = _refVector;
@@ -135,18 +140,18 @@ public:
 		}
 
 		// TEMP
-		RowVector3d r1n = r1.cross(n);
-		RowVector3d r2n = r2.cross(n);
-		double inertia1 = r1n * invInertiaTensor1 * r1n.transpose();
-		double inertia2 = r2n * invInertiaTensor2 * r2n.transpose();
-		RowVector3d ang1 = currAngularVelocities.row(0);
-		RowVector3d ang2 = currAngularVelocities.row(1);
+		//RowVector3d r1n = r1.cross(n);
+		//RowVector3d r2n = r2.cross(n);
+		//double inertia1 = r1n * invInertiaTensor1 * r1n.transpose();
+		//double inertia2 = r2n * invInertiaTensor2 * r2n.transpose();
+		//RowVector3d ang1 = currAngularVelocities.row(0);
+		//RowVector3d ang2 = currAngularVelocities.row(1);
 
-		RowVector3d v1Min = currCOMVelocities.row(0) + ang1.cross(r1);
-		RowVector3d v2Min = currCOMVelocities.row(1) + ang2.cross(r2);
+		//RowVector3d v1Min = currCOMVelocities.row(0) + ang1.cross(r1);
+		//RowVector3d v2Min = currCOMVelocities.row(1) + ang2.cross(r2);
 
-		double nomP1 =  -(1 + CRCoeff) * (v2Min - v1Min).dot(n);
-		double denomP1 = (invMass1 + invMass2 + inertia1 + inertia2);
+		//double nomP1 =  -(1 + CRCoeff) * (v2Min - v1Min).dot(n);
+		//double denomP1 = (invMass1 + invMass2 + inertia1 + inertia2);
 
 		double nomP2 = -(1 + CRCoeff) * Jv;
 		double denomP2 = (constGradient * invMassMatrix * constGradient.transpose())(0, 0);
@@ -214,6 +219,21 @@ public:
 				n = x / dist;
 				Cp = x.dot(n) - refValue;
 			}
+			break;			
+			case ConstraintType::STRETCH:
+			{
+				// The current distance (dist), and the desired distance (refValue), must be equal to zero.
+				n = x / dist;
+				Cp = dist - refValue;
+				if (Cp < 0)
+				{
+					Cp = std::min(0.0, Cp + refValue * refValue2);
+				}
+				else
+				{
+					Cp = std::max(0.0, Cp - refValue * refValue2);
+				}
+			}
 			break;
 		}
 		J.row(0) = -n;
@@ -223,6 +243,7 @@ public:
 
 		if ((constraintEqualityType == ConstraintEqualityType::EQUALITY && std::abs(Cp) <= tolerance)
 			|| (constraintEqualityType == ConstraintEqualityType::INEQUALITY && Cp >= 0))
+			//|| (constraintEqualityType == ConstraintEqualityType::DOUBLE_SIDED_INEQUALITY && std::abs(Cp) <= refValue * refValue2))
 		{
 			correctedCOMPositions = currCOMPositions;
 			return true;
